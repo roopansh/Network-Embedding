@@ -102,3 +102,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Data sample & Embedding
+data/original/higgs.txt
+data/sample/*
+embedding/*
