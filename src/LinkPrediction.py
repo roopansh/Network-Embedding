@@ -52,16 +52,33 @@ def calculate_features(new_edges, embedding):
         for v in new_edges[u]:
             x = embedding[u]
             y = embedding[v]
-
-            features.append(average_feature(x, y))
+            feature = []
+            feature = feature + average_feature(x, y)
+            feature = feature + hammord_feature(x, y)
+            feature = feature + l1_distance_feature(x, y)
+            feature = feature + l2_distance_feature(x, y)
+            features.append(feature)
             labels.append(int(new_edges[u][v]))
-
     return features, labels
 
 
 def split_data(features, labels):
     p = int(features.__len__() * 0.7)
-    return features[:p], labels[:p], features[p + 1:], labels[p + 1:]
+    # divide into equal number of positive and negative edges in training and testing data
+    features_positive = []
+    labels_positive = []
+    features_negative = []
+    labels_negative = []
+    for i in range(features.__len__()):
+        if labels[i] == 1:
+            features_positive.append(features[i])
+            labels_positive.append(labels[i])
+        elif labels[i] == 0:
+            features_negative.append(features[i])
+            labels_negative.append(labels[i])
+    p = p/2
+    return features_positive[:p] + features_negative[:p], labels_positive[:p] + labels_negative[:p], features_positive[p+1:] + features_negative[p+1:], labels_positive[p+1:] + labels_negative[p+1:]
+
 
 
 def main():
@@ -89,11 +106,10 @@ def main():
 
             # Split the edges to training and test data(70% - 30%)
             train_data, train_label, test_data, test_label = split_data(features, labels)
-
             clf = LogisticRegression(solver='lbfgs').fit(train_data, train_label)
 
             score = clf.score(test_data, test_label)
-            print(score)
+            print('Accuracy = {}'.format(score))
             print('\n')
         print('\n')
 

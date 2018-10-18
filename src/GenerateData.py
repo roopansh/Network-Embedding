@@ -14,7 +14,7 @@ def generate_network(network, num_of_nodes):
     # New edges(YES & NO) at time t+1
     new_edges = {x: {} for x in range(num_of_nodes)}
 
-    threshhold = 0.60
+    threshhold = 0.8
 
     # YES links
     count = 0
@@ -139,6 +139,7 @@ def load_dblp():
     print('DBLP DATASET')
     n = 10000
     file = open('data/original/dblp.txt', 'r')
+    edges = 0
     network = [[0 for x in range(n)] for x in range(n)]
     for line in file.read().split('\n')[:-2]:
         a, b = line.split()
@@ -147,8 +148,9 @@ def load_dblp():
         if a < n and b < n:  # taking all the edges with node values less than 10000
             network[a][b] = 1
             network[b][a] = 1
+            edges += 1
     file.close()
-
+    print('Total edges = {}'.format(edges))
     network, new_edges = generate_network(network, n)
     network = csr_matrix(network, dtype=int)
     io.savemat('data/sample/dblp.mat', {'adjacency_matrix': network})
@@ -161,7 +163,7 @@ def load_higgs():
     print('HIGGS DATASET')
     num_of_nodes = 1000
     network = [[0 for y in range(num_of_nodes)] for x in range(num_of_nodes)]
-
+    edges = 0
     file = open('data/original/higgs.txt', 'r')
     file_content = file.readlines()
     for row in file_content:
@@ -171,8 +173,9 @@ def load_higgs():
         if node1 < num_of_nodes and node2 < num_of_nodes:
             network[node1][node2] = 1
             network[node2][node1] = 1
-
+            edges += 1
     file.close()
+    print('Total edges = {}'.format(edges))
 
     network, new_edges = generate_network(network, num_of_nodes)
     network = csr_matrix(network, dtype=int)
