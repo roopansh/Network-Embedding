@@ -46,7 +46,7 @@ def l2_distance_feature(u, v):
     return [(x - y) ** 2 for x, y in zip(u, v)]
 
 
-def calculate_features(new_edges, embedding):
+def calculate_features(new_edges, embedding, prop):
     features = []
     labels = []
     for u in new_edges:
@@ -54,12 +54,19 @@ def calculate_features(new_edges, embedding):
             x = embedding[u]
             y = embedding[v]
             feature = []
-            feature = feature + average_feature(x, y)
-            feature = feature + hammord_feature(x, y)
-            feature = feature + l1_distance_feature(x, y)
-            feature = feature + l2_distance_feature(x, y)
-            features.append(feature)
-            labels.append(int(new_edges[u][v]))
+
+            if prop is 'all' or prop is 'avg':
+                feature = feature + average_feature(x, y)
+            if prop is 'all' or prop is 'ham':
+                feature = feature + hammord_feature(x, y)
+            if prop is 'all' or prop is 'l1':
+                feature = feature + l1_distance_feature(x, y)
+            if prop is 'all' or prop is 'l2':
+                feature = feature + l2_distance_feature(x, y)
+
+            if feature is not []:
+                features.append(feature)
+                labels.append(int(new_edges[u][v]))
     return features, labels
 
 
@@ -115,10 +122,10 @@ def link_prediction(features, labels, folds=5):
         predictions = clf.predict(test_data)
         f1_score_micro += f1_score(test_label, predictions, average='micro')
         f1_score_macro += f1_score(test_label, predictions, average='macro')
-    print('Accuracy = {}'.format(accuracy/folds))
-    print('AUC Score = {}'.format(auc_roc/folds))
-    print('F1 Measure(Micro) = {}'.format(f1_score_micro/folds))
-    print('F1 Measure(Macro) = {}'.format(f1_score_macro/folds))
+    print('Accuracy = {0:.5f}'.format(accuracy/folds))
+    print('AUC Score = {0:.5f}'.format(auc_roc/folds))
+    print('F1 Measure(Micro) = {0:.5f}'.format(f1_score_micro/folds))
+    print('F1 Measure(Macro) = {0:.5f}'.format(f1_score_macro/folds))
     print('\n')
 
 
@@ -143,10 +150,33 @@ def main():
         for embedding in embedding_files[i]:
             print(embedding)
             embedding = load_embedding(embedding)
-            features, labels = calculate_features(new_edge, embedding)
+
+            # Features taken individually
+            print('Taking only Average')
+            features, labels = calculate_features(new_edge, embedding, 'avg')
             features, labels = split_data(features, labels, folds=5)
             link_prediction(features, labels, folds=5)
-        print('\n')
+
+            print('Taking only Hammord')
+            features, labels = calculate_features(new_edge, embedding, 'ham')
+            features, labels = split_data(features, labels, folds=5)
+            link_prediction(features, labels, folds=5)
+
+            print('Taking only L1 Distance')
+            features, labels = calculate_features(new_edge, embedding, 'l1')
+            features, labels = split_data(features, labels, folds=5)
+            link_prediction(features, labels, folds=5)
+
+            print('Taking only L2 Distance')
+            features, labels = calculate_features(new_edge, embedding, 'l2')
+            features, labels = split_data(features, labels, folds=5)
+            link_prediction(features, labels, folds=5)
+
+            # All features taken together
+            print('Taking All features together')
+            features, labels = calculate_features(new_edge, embedding, 'all')
+            features, labels = split_data(features, labels, folds=5)
+            link_prediction(features, labels, folds=5)
 
 
 if __name__ == '__main__':
