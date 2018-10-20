@@ -1,6 +1,7 @@
+import random
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-
+from sklearn.metrics import roc_auc_score, f1_score
 
 def load_embedding(file_path):
     """
@@ -62,9 +63,11 @@ def calculate_features(new_edges, embedding):
     return features, labels
 
 
-def split_data(features, labels):
-    p = int(features.__len__() * 0.7)
-    # divide into equal number of positive and negative edges in training and testing data
+def split_data(features, labels, folds=5):
+    # The number of elements of each class in a fold
+    p = int(features.__len__() / (folds * 2)) + 1
+
+    # divide into positive and negative edges
     features_positive = []
     labels_positive = []
     features_negative = []
@@ -76,9 +79,47 @@ def split_data(features, labels):
         elif labels[i] == 0:
             features_negative.append(features[i])
             labels_negative.append(labels[i])
-    p = p/2
-    return features_positive[:p] + features_negative[:p], labels_positive[:p] + labels_negative[:p], features_positive[p+1:] + features_negative[p+1:], labels_positive[p+1:] + labels_negative[p+1:]
 
+    random.shuffle(features_positive)
+    random.shuffle(features_negative)
+    # return the folds, with each fold having equal number of positive & negative samples
+    features_to_ret = []
+    labels_to_ret = []
+    for i in range(folds):
+        features_to_ret.append(features_positive[i*p:(i+1)*p] + features_negative[i*p:(i+1)*p])
+        labels_to_ret.append(labels_positive[i*p:(i+1)*p] + labels_negative[i*p:(i+1)*p])
+
+    return features_to_ret, labels_to_ret
+
+
+def link_prediction(features, labels, folds=5):
+    accuracy = 0
+    auc_roc = 0
+    f1_score_micro = 0
+    f1_score_macro = 0
+    for i in range(folds):
+        test_data = features[i]
+        test_label = labels[i]
+        train_data = []
+        train_label = []
+        for j in range(folds):
+            if i != j:
+                train_data = train_data + features[j]
+                train_label = train_label + labels[j]
+
+        clf = LogisticRegression(penalty='l2', solver='lbfgs', max_iter=500, n_jobs=-1).fit(train_data, train_label)
+
+        accuracy += clf.score(test_data, test_label)
+        proba = clf.predict_proba(test_data)
+        auc_roc += roc_auc_score(test_label, [y for x,y in proba])
+        predictions = clf.predict(test_data)
+        f1_score_micro += f1_score(test_label, predictions, average='micro')
+        f1_score_macro += f1_score(test_label, predictions, average='macro')
+    print('Accuracy = {}'.format(accuracy/folds))
+    print('AUC Score = {}'.format(auc_roc/folds))
+    print('F1 Measure(Micro) = {}'.format(f1_score_micro/folds))
+    print('F1 Measure(Macro) = {}'.format(f1_score_macro/folds))
+    print('\n')
 
 
 def main():
@@ -103,14 +144,8 @@ def main():
             print(embedding)
             embedding = load_embedding(embedding)
             features, labels = calculate_features(new_edge, embedding)
-
-            # Split the edges to training and test data(70% - 30%)
-            train_data, train_label, test_data, test_label = split_data(features, labels)
-            clf = LogisticRegression(solver='lbfgs').fit(train_data, train_label)
-
-            score = clf.score(test_data, test_label)
-            print('Accuracy = {}'.format(score))
-            print('\n')
+            features, labels = split_data(features, labels, folds=5)
+            link_prediction(features, labels, folds=5)
         print('\n')
 
 
